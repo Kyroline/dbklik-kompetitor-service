@@ -1,0 +1,10 @@
+{
+  "name": "kompetitor",
+  "version": "1.0.0",
+  "description": "Kompetitor Module — competitor stores, (kategori × brand) mapping, scraping stats/product tables and the Our Product price comparison, ported from portal_produk_dbklik's KompetitorController, served over gRPC",
+  "author": "Framework Team",
+  "dependencies": [],
+  "providers": [
+    "KompetitorProvider"
+  ]
+}

@@ -1,0 +1,304 @@
+// Proto contract for the kompetitor module's gRPC presentation layer.
+// Messages mirror modules/kompetitor/application/dto/dto.go field-for-field;
+// RPCs mirror the retired Laravel KompetitorController methods one-to-one.
+syntax = "proto3";
+
+package kompetitor;
+
+option go_package = "github.com/dbklik/dbklik-kompetitor-service/modules/kompetitor/presentation/grpc/pb;pb";
+
+service KompetitorService {
+  // ── Kompetitor CRUD (tab Kelola Kompetitor) ──────────────────────────
+  rpc IndexMeta(IndexMetaRequest) returns (IndexMetaResponse);
+  rpc ManageData(ManageDataRequest) returns (ManageDataResponse);
+  rpc CreateKompetitor(SaveKompetitorRequest) returns (MessageResponse);
+  rpc UpdateKompetitor(SaveKompetitorRequest) returns (MessageResponse);
+  rpc DeleteKompetitor(DeleteKompetitorRequest) returns (MessageResponse);
+
+  // ── Mapping kompetitor (matrix kategori × brand) ─────────────────────
+  rpc MappingMatrix(MappingMatrixRequest) returns (MappingMatrixResponse);
+  rpc MappingCell(MappingCellRequest) returns (MappingCellResponse);
+  rpc MappingCellUpdate(MappingCellUpdateRequest) returns (MessageResponse);
+
+  // ── Riset Produk (stats + product tables) ────────────────────────────
+  rpc Stats(StatsRequest) returns (StatsResponse);
+  rpc Products(ProductsRequest) returns (ProductsResponse);
+  rpc LegacyProducts(LegacyProductsRequest) returns (LegacyProductsResponse);
+  rpc BatchCodes(BatchCodesRequest) returns (BatchCodesResponse);
+
+  // ── Our Product ──────────────────────────────────────────────────────
+  rpc FilterOptions(FilterOptionsRequest) returns (FilterOptionsResponse);
+  rpc OurProducts(OurProductsRequest) returns (OurProductsResponse);
+
+  // ── Ingest (Laravel parses the Excel, sends plain rows) ──────────────
+  rpc ImportProducts(ImportProductsRequest) returns (ImportProductsResponse);
+}
+
+// ── Shared ─────────────────────────────────────────────────────────────
+
+message NamedRow {
+  uint64 id = 1;
+  string name = 2;
+}
+
+message MessageResponse {
+  string message = 1;
+}
+
+// ── Kompetitor CRUD ────────────────────────────────────────────────────
+
+message IndexMetaRequest {}
+
+message KompetitorMetaRow {
+  uint64 id = 1;
+  string name = 2;
+  bool must_scrape = 3;
+}
+
+message IndexMetaResponse {
+  repeated NamedRow list_kompetitor = 1;
+  repeated KompetitorMetaRow list_all_kompetitor = 2;
+  uint64 dbklik_kompetitor_id = 3;
+  repeated NamedRow list_brand = 4;
+  repeated NamedRow list_kategori = 5;
+}
+
+message ManageDataRequest {}
+
+message KompetitorRow {
+  uint64 id = 1;
+  string name = 2;
+  string shopee_code = 3;
+  string tokopedia_code = 4;
+  bool must_scrape = 5;
+  int64 mapping_count = 6;
+}
+
+message ManageDataResponse {
+  repeated KompetitorRow data = 1;
+}
+
+// SaveKompetitorRequest drives both create (id = 0) and update.
+message SaveKompetitorRequest {
+  uint64 id = 1;
+  string name = 2;
+  string shopee_code = 3;
+  string tokopedia_code = 4;
+  bool must_scrape = 5;
+}
+
+message DeleteKompetitorRequest {
+  uint64 id = 1;
+}
+
+// ── Mapping panel ──────────────────────────────────────────────────────
+
+message MappingMatrixRequest {
+  repeated uint64 brands = 1;
+  repeated uint64 kategoris = 2;
+}
+
+message MappingMatrixResponse {
+  repeated NamedRow brands = 1;
+  repeated NamedRow kategoris = 2;
+  // counts is keyed "kategoriID|brandID" (specific cells only).
+  map<string, int64> counts = 3;
+  // universal_counts is keyed by brand id (kategori_id NULL cells).
+  map<uint64, int64> universal_counts = 4;
+  bool filtered = 5;
+}
+
+// An unset kategori_id addresses the brand's universal cell.
+message MappingCellRequest {
+  optional uint64 kategori_id = 1;
+  uint64 brand_id = 2;
+}
+
+message MappingCellResponse {
+  repeated uint64 kompetitor_ids = 1;
+}
+
+message MappingCellUpdateRequest {
+  optional uint64 kategori_id = 1;
+  uint64 brand_id = 2;
+  // An empty list deletes the cell.
+  repeated uint64 kompetitors = 3;
+}
+
+// ── Riset Produk ───────────────────────────────────────────────────────
+
+// Both dates empty means "latest data"; kompetitor_id 0 means every store.
+message StatsRequest {
+  string start_date = 1;
+  string end_date = 2;
+  uint64 kompetitor_id = 3;
+}
+
+message StatsMetrics {
+  double total_omzet = 1;
+  double rata_omzet_minggu = 2;
+  double rata_omzet_hari = 3;
+  int64 total_terjual = 4;
+  double rata_terjual_minggu = 5;
+  double rata_terjual_hari = 6;
+  int64 rata_harga = 7;
+  int64 produk_ready = 8;
+  int64 produk_habis = 9;
+}
+
+// An absent current/previous block means "no data in that period" — the
+// panel renders an empty state rather than zeroes.
+message StatsResponse {
+  StatsMetrics current = 1;
+  StatsMetrics previous = 2;
+  repeated uint64 current_batches = 3;
+  repeated uint64 previous_batches = 4;
+}
+
+message ProductsRequest {
+  string start_date = 1;
+  string end_date = 2;
+  uint64 kompetitor_id = 3;
+  string search = 4;
+  int32 start = 5;
+  int32 length = 6;
+  int32 draw = 7;
+}
+
+message ProductRow {
+  string kompetitor = 1;
+  string nama_produk = 2;
+  string harga = 3;
+  optional double perubahan_harga = 4;
+  int64 terjual_per_bulan = 5;
+  string pendapatan = 6;
+  string rata_hari = 7;
+  optional double rating = 8;
+  optional int64 stok = 9;
+  string batch_id = 10;
+}
+
+message ProductsResponse {
+  int32 draw = 1;
+  int64 records_total = 2;
+  int64 records_filtered = 3;
+  repeated ProductRow data = 4;
+}
+
+message LegacyProductsRequest {
+  string search = 1;
+  // kompetitor is a store NAME and batch a batch CODE, not ids.
+  string kompetitor = 2;
+  string batch = 3;
+  int32 start = 4;
+  int32 length = 5;
+  int32 draw = 6;
+}
+
+message LegacyProductRow {
+  string kompetitor = 1;
+  string nama_produk = 2;
+  string harga = 3;
+  double harga_raw = 4;
+  int64 terjual_per_bulan = 5;
+  string pendapatan = 6;
+  string rata_hari = 7;
+  optional double rating = 8;
+  string batch_id = 9;
+}
+
+message LegacyProductsResponse {
+  int32 draw = 1;
+  int64 records_total = 2;
+  int64 records_filtered = 3;
+  repeated LegacyProductRow data = 4;
+}
+
+message BatchCodesRequest {}
+
+message BatchCodesResponse {
+  repeated string codes = 1;
+}
+
+// ── Our Product ────────────────────────────────────────────────────────
+
+message FilterOptionsRequest {}
+
+message FilterOptionsResponse {
+  repeated string brands = 1;
+  repeated string kategoris = 2;
+}
+
+message OurProductsRequest {
+  string search = 1;
+  repeated string brand = 2;
+  repeated string kategori = 3;
+  repeated string abc = 4;
+  int32 start = 5;
+  int32 length = 6;
+  int32 draw = 7;
+}
+
+// KompetitorCell is one kompetitor column: store name + matched product
+// price + the batch date that price came from. stale = the price comes from
+// an older batch because the store was not scraped in the latest one;
+// belum_scrape marks a store absent from the latest batch, so an empty cell
+// can be told apart from "checked, nothing found".
+message KompetitorCell {
+  string kompetitor = 1;
+  optional string nama_produk = 2;
+  optional double harga = 3;
+  optional string tanggal_scraping = 4;
+  bool stale = 5;
+  bool belum_scrape = 6;
+}
+
+message OurProductRow {
+  uint64 id = 1;
+  string sku = 2;
+  string nama = 3;
+  string kategori = 4;
+  string brand = 5;
+  double hpp_latest = 6;
+  double harga_shopee = 7;
+  KompetitorCell harga_tayang = 8;
+  optional double margin_shopee = 9;
+  optional string abc = 10;
+  repeated KompetitorCell kompetitor_harga = 11;
+}
+
+message OurProductsResponse {
+  int32 draw = 1;
+  int64 records_total = 2;
+  int64 records_filtered = 3;
+  repeated OurProductRow data = 4;
+}
+
+// ── Ingest ─────────────────────────────────────────────────────────────
+
+message IngestProduct {
+  string name = 1;
+  double price = 2;
+  int64 sold_monthly = 3;
+  double revenue_monthly = 4;
+  int64 sold_weekly = 5;
+  double revenue_weekly = 6;
+  optional double rating = 7;
+  int64 wishlist_count = 8;
+  int64 stock = 9;
+}
+
+message ImportProductsRequest {
+  uint64 kompetitor_id = 1;
+  // executed_at is YYYY-MM-DD; batch_code empty = "import-<Ymd>".
+  string executed_at = 2;
+  string batch_code = 3;
+  repeated IngestProduct products = 4;
+}
+
+message ImportProductsResponse {
+  string batch_code = 1;
+  string executed_at = 2;
+  int32 total_products = 3;
+  string kompetitor = 4;
+}
