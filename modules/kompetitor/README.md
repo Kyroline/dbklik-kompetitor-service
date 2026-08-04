@@ -91,8 +91,8 @@ Laravel side; this service assumes its caller is already authorized.
   `1 = 0` so an empty period never degrades into "all data".
 - **Our Product staleness.** Stores present in the latest batch read from it;
   a missing product there is a real signal, so the cell stays blank. Stores
-  not yet scraped in the latest batch fall back to their last batch within
-  `MaxStaleDays` (3) and are flagged `stale`.
+  not yet scraped in the latest batch fall back to their last completed batch,
+  no matter how old, and are flagged `stale`.
 - **IDF corpus.** Token weights come from the full corpus (every product name
   in the batches actually read + every mappable item name), cached 12 hours
   per batch set. Scoring a page against a page-local corpus would make

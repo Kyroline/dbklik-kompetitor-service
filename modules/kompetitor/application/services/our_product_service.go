@@ -190,8 +190,7 @@ func (s *KompetitorService) matchOurProducts(rows []repositories.OurProductRow) 
 	// has not been scraped in the latest batch keeps its last known price
 	// (flagged stale in the UI), while a store that WAS scraped but whose
 	// product was not found is deliberately left blank.
-	cutoff := domainservices.StaleCutoff(latestBatch.ExecutedAt, s.cfg.MaxStaleDays)
-	batchRows, err := s.scraping.BatchRowsBetween(cutoff, latestBatch.ExecutedAt)
+	batchRows, err := s.scraping.BatchRowsUpTo(latestBatch.ExecutedAt)
 	if err != nil {
 		return nil, nil, nil, err
 	}

@@ -112,7 +112,4 @@ func TestResolveBatchByKompetitorFlagsStaleStores(t *testing.T) {
 	if !resolved[2].IsStale {
 		t.Fatal("store 2 fell back to an older batch, it must be stale")
 	}
-	if got := services.StaleCutoff(latestExecutedAt, services.MaxStaleDays); !got.Equal(day("2026-07-17")) {
-		t.Fatalf("cutoff: want 2026-07-17, got %s", got.Format("2006-01-02"))
-	}
 }

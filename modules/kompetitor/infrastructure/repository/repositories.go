@@ -545,12 +545,11 @@ func (r *ScrapingRepositoryGorm) LatestCompletedBatch() (*entities.ScrapingBatch
 	return &row, nil
 }
 
-func (r *ScrapingRepositoryGorm) BatchRowsBetween(from, to time.Time) ([]repositories.BatchRow, error) {
+func (r *ScrapingRepositoryGorm) BatchRowsUpTo(to time.Time) ([]repositories.BatchRow, error) {
 	var rows []repositories.BatchRow
 	err := r.db.Table("scraping_products as sp").
 		Joins("JOIN scraping_batches as sb ON sb.id = sp.scraping_batch_id").
 		Where("sb.status = ?", "completed").
-		Where("sb.executed_at >= ?", from).
 		Where("sb.executed_at <= ?", to).
 		Distinct().
 		Select("sp.kompetitor_id, sp.scraping_batch_id as batch_id, sb.executed_at").

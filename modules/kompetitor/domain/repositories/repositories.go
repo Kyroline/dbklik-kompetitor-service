@@ -207,9 +207,9 @@ type ScrapingRepository interface {
 	ProductNamesForBatches(batchIDs []uint64) ([]string, error)
 	// LatestCompletedBatch returns the newest completed batch, or nil.
 	LatestCompletedBatch() (*entities.ScrapingBatch, error)
-	// BatchRowsBetween returns (kompetitor, batch) pairs of completed batches
-	// executed within [from, to], oldest first.
-	BatchRowsBetween(from, to time.Time) ([]BatchRow, error)
+	// BatchRowsUpTo returns (kompetitor, batch) pairs of completed batches
+	// executed at or before `to`, oldest first.
+	BatchRowsUpTo(to time.Time) ([]BatchRow, error)
 	// FilterProducts is the legacy batch-code/kompetitor-name filtered table.
 	FilterProducts(search, kompetitorName, batchCode string, offset, limit int) ([]LegacyProductRow, int64, error)
 	// CompletedBatchCodes returns completed batch codes, newest first.

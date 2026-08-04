@@ -111,7 +111,7 @@ func (UnavailableScrapingRepo) ProductNamesForBatches(batchIDs []uint64) ([]stri
 func (UnavailableScrapingRepo) LatestCompletedBatch() (*entities.ScrapingBatch, error) {
 	return nil, errDBUnavailable()
 }
-func (UnavailableScrapingRepo) BatchRowsBetween(from, to time.Time) ([]repositories.BatchRow, error) {
+func (UnavailableScrapingRepo) BatchRowsUpTo(to time.Time) ([]repositories.BatchRow, error) {
 	return nil, errDBUnavailable()
 }
 func (UnavailableScrapingRepo) FilterProducts(search, kompetitorName, batchCode string, offset, limit int) ([]repositories.LegacyProductRow, int64, error) {
